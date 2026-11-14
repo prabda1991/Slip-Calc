@@ -135,9 +135,35 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
   border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100% - 32px);z-index:10}
 .toast.show{opacity:1}
 
+/* ---------- ใช้ร่วมกัน ---------- */
+.sharebar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:12px 16px}
+.sharebar[hidden]{display:none}
+.share-info{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;min-width:0;font-size:14px}
+.share-who{color:var(--muted);font-size:13px}
+td select{width:100%;font:inherit;font-size:14px;color:var(--text);background:transparent;border:1px solid transparent;border-radius:6px;padding:5px 3px;color-scheme:light dark}
+td select:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+td select:disabled{opacity:.45}
+table.items:not(.shared) .c-payer{display:none}
+.settle{padding:12px 16px;border-top:1px solid var(--border);font-size:14px}
+.settle:empty{display:none}
+.settle div + div{margin-top:4px}
+.settle .muted{color:var(--muted);font-size:13px}
+dialog.small{width:min(420px,calc(100% - 32px))}
+.form{display:grid;gap:12px;padding:16px}
+.form [hidden]{display:none}
+.form label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+.form input{font:inherit;font-size:16px;color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;min-height:44px;width:100%}
+.form input:focus{outline:none;border-color:var(--accent)}
+.form p{margin:0;font-size:13px;color:var(--muted)}
+.form p.err{color:var(--danger)}
+.form p:empty{display:none}
+.form button{min-height:44px}
+.code{font:600 17px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:12px;background:var(--surface-2);border-radius:8px;
+  text-align:center;-webkit-user-select:all;user-select:all;overflow-wrap:anywhere}
+
 /* ป้ายกำกับช่อง ใช้เฉพาะมุมมองมือถือ */
 .lbl{display:none}
-.c-date label{display:block}
+.c-date label,.c-payer label{display:block}
 
 /* ---------- มือถือ: รายการแสดงเป็นการ์ดแทนตาราง ---------- */
 @media screen and (max-width:720px){
@@ -199,10 +225,23 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
   dialog{width:calc(100% - 16px);max-height:calc(100dvh - 24px)}
   .dlg-body{max-height:calc(100dvh - 100px);padding:12px}
   #vClose{min-height:40px;padding:6px 16px}
+
+  .sharebar{padding:12px}
+  .items td.c-payer{grid-area:payer}
+  .items td select{font-size:16px;min-height:44px;padding:8px;border-color:var(--border);border-radius:8px;background:var(--surface-2)}
+  table.items.shared tr{grid-template-areas:
+      "thumb payee payee payee payee payee"
+      "thumb amt amt amt amt amt"
+      "date date date date date date"
+      "cat cat cat note note note"
+      "payer payer payer inc inc inc"
+      "acts acts acts acts acts acts"}
+  .items.shared td.c-inc{align-self:end}
+  dialog.small{width:calc(100% - 32px)}
 }
 
 @media print{
-  .drop,.tools,.acts,.status,.note,.no-print{display:none!important}
+  .drop,.tools,.acts,.status,.note,.sharebar,.no-print{display:none!important}
   body{background:#fff;color:#000}
   .card,.panel{border-color:#bbb}
   .card.primary{background:#fff;color:#000;border-color:#bbb}
@@ -244,6 +283,20 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
     </div>
   </div>
 
+  <section id="share" class="panel sharebar" hidden>
+    <div class="share-info">
+      <strong>ใช้ร่วมกัน</strong>
+      <span id="shareState" class="pill"></span>
+      <span id="shareWho" class="share-who"></span>
+    </div>
+    <div class="tools">
+      <button id="roomCreate" class="primary">สร้างห้อง</button>
+      <button id="roomJoin">เข้าห้องด้วยรหัส</button>
+      <button id="roomInvite" hidden>เชิญ / ดูรหัส</button>
+      <button id="roomLeave" class="danger" hidden>ออกจากห้อง</button>
+    </div>
+  </section>
+
   <section class="panel">
     <div class="panel-head">
       <h2>รายการ <span id="itemCount"></span></h2>
@@ -264,12 +317,24 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
           <th>ผู้รับ / ร้านค้า</th>
           <th style="width:170px">หมวดหมู่</th>
           <th style="width:130px" class="num">จำนวนเงิน (บาท)</th>
+          <th style="width:110px" class="c-payer">ใครจ่าย</th>
           <th style="width:170px">หมายเหตุ</th>
           <th style="width:96px"></th>
         </tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </div>
+  </section>
+
+  <section id="payerPanel" class="panel" hidden>
+    <div class="panel-head"><h2>ใครจ่ายเท่าไร <span>หารเท่ากันทุกคน</span></h2></div>
+    <div class="table-wrap">
+      <table class="mini">
+        <thead><tr><th>ผู้จ่าย</th><th class="num">รายการ</th><th class="num">จ่ายไป</th><th class="num">ส่วนต่าง</th></tr></thead>
+        <tbody id="byPayer"></tbody>
+      </table>
+    </div>
+    <div id="settle" class="settle"></div>
   </section>
 
   <div class="grid2">
@@ -294,7 +359,8 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
   </div>
 
   <p class="note">การอ่านสลิปทำงานในเบราว์เซอร์ของคุณเอง รูปสลิปไม่ถูกส่งขึ้นเซิร์ฟเวอร์ (ครั้งแรกต้องต่ออินเทอร์เน็ตเพื่อโหลดโมเดลภาษาไทย ~ไม่กี่ MB)
-    · ระบบอ่านอัตโนมัติอาจผิดพลาดได้ กรุณาตรวจตัวเลขก่อนใช้งาน แก้ไขได้ทุกช่องในตาราง · ข้อมูลรายการถูกบันทึกไว้ในเบราว์เซอร์นี้</p>
+    · ระบบอ่านอัตโนมัติอาจผิดพลาดได้ กรุณาตรวจตัวเลขก่อนใช้งาน แก้ไขได้ทุกช่องในตาราง · ข้อมูลรายการถูกบันทึกไว้ในเบราว์เซอร์นี้<span id="noteShare" hidden>
+    · เมื่ออยู่ในห้องใช้ร่วมกัน รายละเอียดรายการและรูปย่อของสลิปจะถูกเก็บบนเซิร์ฟเวอร์ Firebase เพื่อซิงก์ให้สมาชิกในห้อง (รูปสลิปขนาดเต็มยังอยู่ในเครื่อง)</span></p>
 </div>
 
 <datalist id="cats"></datalist>
@@ -304,6 +370,28 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
   <div class="dlg-body">
     <img id="vImg" alt="รูปสลิป">
     <div><div style="font-size:13px;color:var(--muted);margin-bottom:6px">ข้อความที่อ่านได้</div><pre id="vText"></pre></div>
+  </div>
+</dialog>
+<dialog id="roomDlg" class="small">
+  <form id="roomForm" method="dialog">
+    <div class="dlg-head"><h3 id="rTitle">สร้างห้อง</h3><button type="button" id="rCancel">ยกเลิก</button></div>
+    <div class="form">
+      <label>ชื่อของคุณ (ใช้บอกว่าใครจ่าย)
+        <input id="rName" type="text" maxlength="20" autocomplete="off" placeholder="เช่น ต้น"></label>
+      <label id="rCodeWrap">รหัสห้อง
+        <input id="rCode" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="xxxxx-xxxxx-xxxxx-xxxxx"></label>
+      <p id="rHint"></p>
+      <button type="submit" class="primary">ตกลง</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="inviteDlg" class="small">
+  <div class="dlg-head"><h3>เชิญเข้าห้อง</h3><button id="iClose">ปิด</button></div>
+  <div class="form">
+    <p>ส่งลิงก์หรือรหัสนี้ให้คนที่จะใช้ร่วมกันเท่านั้น ใครมีรหัสจะเห็นและแก้รายการได้ทั้งหมด</p>
+    <div id="iCode" class="code"></div>
+    <button id="iShare" class="primary">ส่งลิงก์เชิญ</button>
+    <button id="iCopy">คัดลอกรหัส</button>
   </div>
 </dialog>
 <div id="toast" class="toast" role="status"></div>
@@ -321,6 +409,22 @@ let people = 1;
 const fullImages = new Map();   // id -> object URL (session only)
 const queue = [];
 let busy = false, currentId = null, workerPromise = null;
+
+/* ใช้ร่วมกัน: ใส่ค่า firebaseConfig ของโปรเจกต์ที่นี่เพื่อเปิดใช้การซิงก์ระหว่างเครื่อง
+   (ค่านี้ไม่ใช่ความลับ สิ่งที่กันคนนอกคือรหัสห้อง + Firestore rules) */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDkFtWtmjo24WkoKtz-A-DVBL2So5rB65I",
+  authDomain: "slip-calc.firebaseapp.com",
+  projectId: "slip-calc",
+  storageBucket: "slip-calc.firebasestorage.app",
+  messagingSenderId: "779986830550",
+  appId: "1:779986830550:web:8ab7cd0f59f6e1b552f577"
+};
+const FIREBASE_VER = '10.12.2';
+const SYNC_KEY = 'slip-expense-sync-v1';
+let sync = {room: '', name: '', pendingDel: []};   // ห้องที่เครื่องนี้อยู่ + รายการที่รอลบบนเซิร์ฟเวอร์
+let members = [];                                   // ชื่อสมาชิกในห้อง
+let syncState = 'off';
 
 /* ---------- utils ---------- */
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -359,9 +463,19 @@ let saveT; const saveSoon = () => { clearTimeout(saveT); saveT = setTimeout(save
 function load() {
   try {
     const d = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-    if (d && Array.isArray(d.items)) { items = d.items; people = Math.max(1, parseInt(d.people) || 1); }
+    if (d && Array.isArray(d.items)) {
+      items = d.items.map(i => ({payer: '', updatedAt: 0, dirty: false, synced: false, ...i}));
+      people = Math.max(1, parseInt(d.people) || 1);
+    }
   } catch (_) {}
 }
+function loadSync() {
+  try {
+    const d = JSON.parse(localStorage.getItem(SYNC_KEY) || 'null');
+    if (d && typeof d.room === 'string') sync = {room: d.room, name: String(d.name || ''), pendingDel: Array.isArray(d.pendingDel) ? d.pendingDel : []};
+  } catch (_) {}
+}
+function saveSync() { try { localStorage.setItem(SYNC_KEY, JSON.stringify(sync)); } catch (_) {} }
 
 /* ---------- image prep ---------- */
 function loadImage(file) {
@@ -486,7 +600,7 @@ async function pump() {
     }
     if (canvas) canvas.width = canvas.height = 0;
     currentId = null;
-    if (items.includes(item)) { updateRow(item); renderSummary(); save(); }
+    if (items.includes(item)) { touch(item); updateRow(item); renderSummary(); save(); }
     else { const u = fullImages.get(item.id); if (u) { URL.revokeObjectURL(u); fullImages.delete(item.id); } }
     setStatus();
   }
@@ -638,7 +752,8 @@ function guessCategory(payee) {
 /* ---------- add items ---------- */
 function newItem(extra) {
   return {id: uid(), fileKey: '', fileName: '', thumb: '', date: '', time: '', payee: '', category: '', amount: null,
-          note: '', ref: '', include: true, status: 'manual', progress: 0, raw: '', error: '', ...extra};
+          note: '', ref: '', include: true, status: 'manual', progress: 0, raw: '', error: '',
+          payer: sync.room ? sync.name : '', updatedAt: 0, dirty: false, synced: false, ...extra};
 }
 function addFiles(fileList) {
   const files = [...(fileList || [])].filter(f => f.type.startsWith('image/'));
@@ -678,8 +793,11 @@ function statusPill(it) {
 function rowHtml(it, dups) {
   const dis = (it.status === 'queued' || it.status === 'reading') ? 'disabled' : '';
   const thumb = it.thumb
-    ? `<button class="thumb" data-act="view" title="ดูสลิป"><img src="${it.thumb}" alt="สลิป"></button>`
+    ? `<button class="thumb" data-act="view" title="ดูสลิป"><img src="${esc(it.thumb)}" alt="สลิป"></button>`
     : `<div class="thumb">${it.fileName ? '…' : 'เอง'}</div>`;
+  const names = payerNames();
+  if (it.payer && !names.includes(it.payer)) names.push(it.payer);
+  const payerOpts = `<option value="">ไม่ระบุ</option>` + names.map(n => `<option value="${esc(n)}" ${n === it.payer ? 'selected' : ''}>${esc(n)}</option>`).join('');
   return `<tr data-id="${it.id}" class="${it.include ? '' : 'excluded'}">
     <td class="c-inc"><label><input type="checkbox" data-f="include" ${it.include ? 'checked' : ''} aria-label="นับรวมในยอด"><span class="lbl">นับรวมในยอด</span></label></td>
     <td class="c-thumb">${thumb}</td>
@@ -688,6 +806,7 @@ function rowHtml(it, dups) {
       <div class="sub">${statusPill(it)}<span class="pill warn dup" ${dups.has(it.id) ? '' : 'hidden'}>อาจซ้ำ</span>${it.ref ? `<span class="ref">Ref ${esc(it.ref)}</span>` : ''}</div></td>
     <td class="c-cat"><input type="text" list="cats" data-f="category" value="${esc(it.category)}" placeholder="หมวดหมู่" aria-label="หมวดหมู่" ${dis}></td>
     <td class="c-amt"><input type="number" step="0.01" min="0" inputmode="decimal" data-f="amount" class="amt ${it.status === 'warn' && it.amount == null ? 'need' : ''}" value="${it.amount != null ? it.amount.toFixed(2) : ''}" placeholder="0.00" aria-label="จำนวนเงิน (บาท)" ${dis}></td>
+    <td class="c-payer"><label><span class="lbl">ใครจ่าย</span><select data-f="payer" aria-label="ใครจ่าย" ${dis}>${payerOpts}</select></label></td>
     <td class="c-note"><input type="text" data-f="note" value="${esc(it.note)}" placeholder="หมายเหตุ" aria-label="หมายเหตุ"></td>
     <td class="acts">${it.raw || it.thumb ? '<button data-act="view">ดู</button> ' : ''}<button data-act="del" class="danger">ลบ</button></td>
   </tr>`;
@@ -703,13 +822,14 @@ function renderTable() {
   const dups = dupIds();
   tbody.innerHTML = items.length
     ? items.map(it => rowHtml(it, dups)).join('')
-    : '<tr class="empty"><td colspan="8">ยังไม่มีรายการ เพิ่มสลิปด้านบน หรือกด “เพิ่มรายการเอง”</td></tr>';
+    : '<tr class="empty"><td colspan="9">ยังไม่มีรายการ เพิ่มสลิปด้านบน หรือกด “เพิ่มรายการเอง”</td></tr>';
   if (keep) {
     const el = tbody.querySelector(`tr[data-id="${keep.id}"] [data-f="${keep.f}"]`);
     if (el && !el.disabled) { el.focus(); try { if (keep.s != null) el.setSelectionRange(keep.s, keep.e); } catch (_) {} }
   }
-  $('#itemCount').textContent = items.length ? `(${items.length})` : '';
+  renderCount();
 }
+function renderCount() { $('#itemCount').textContent = items.length ? `(${items.length})` : ''; }
 // อัปเดตเฉพาะแถวเดียว: ไม่สร้างตารางใหม่ทั้งหมด คีย์บอร์ดมือถือจึงไม่หุบขณะกำลังพิมพ์แถวอื่น
 function updateRow(it) {
   const tr = document.querySelector(`#rows tr[data-id="${it.id}"]`);
@@ -749,6 +869,312 @@ function renderSummary() {
   $('#byDate').innerHTML = dates.length
     ? dates.map(([k, g]) => `<tr><td>${esc(thDate(k))}</td><td class="num">${g.n}</td><td class="num">${fmt(g.sum)}</td></tr>`).join('')
     : '<tr class="empty"><td colspan="3">ยังไม่มีข้อมูล</td></tr>';
+  if (sync.room) renderPayers(counted);
+}
+// สรุปว่าใครจ่ายไปเท่าไร และใครต้องโอนคืนใคร (หารเท่ากันทุกคนในห้อง)
+function renderPayers(counted) {
+  const paid = new Map(payerNames().map(n => [n, {n: 0, sum: 0}]));
+  let unassigned = 0;
+  for (const i of counted) {
+    const p = (i.payer || '').trim();
+    if (!p) { unassigned++; continue; }
+    const g = paid.get(p) || {n: 0, sum: 0}; g.n++; g.sum += i.amount; paid.set(p, g);
+  }
+  const ppl = [...paid.entries()];
+  const tot = ppl.reduce((a, [, g]) => a + g.sum, 0);
+  const share = ppl.length ? tot / ppl.length : 0;
+  const bal = ppl.map(([name, g]) => ({name, c: Math.round((g.sum - share) * 100)}));   // สตางค์: บวก = ได้คืน
+  $('#byPayer').innerHTML = ppl.length
+    ? ppl.map(([name, g], i) => {
+        const c = bal[i].c;
+        const diff = c > 0 ? `ได้คืน ${fmt(c / 100)}` : c < 0 ? `จ่ายเพิ่ม ${fmt(-c / 100)}` : 'พอดี';
+        return `<tr><td>${esc(name)}</td><td class="num">${g.n}</td><td class="num">${fmt(g.sum)}</td><td class="num">${diff}</td></tr>`;
+      }).join('')
+    : '<tr class="empty"><td colspan="4">ยังไม่มีข้อมูล</td></tr>';
+  const lines = [];
+  if (ppl.length < 2) lines.push('<div class="muted">ยังมีคนเดียวในห้อง กด “เชิญ / ดูรหัส” เพื่อส่งลิงก์ให้อีกคน</div>');
+  else {
+    const debt = bal.filter(b => b.c < 0).map(b => ({...b, c: -b.c})), cred = bal.filter(b => b.c > 0).map(b => ({...b}));
+    let i = 0, j = 0;
+    while (i < debt.length && j < cred.length) {
+      const x = Math.min(debt[i].c, cred[j].c);
+      if (x > 0) lines.push(`<div><b>${esc(debt[i].name)}</b> โอนให้ <b>${esc(cred[j].name)}</b> ${fmt(x / 100)} บาท</div>`);
+      debt[i].c -= x; cred[j].c -= x;
+      if (!debt[i].c) i++;
+      if (!cred[j].c) j++;
+    }
+    if (!lines.length) lines.push('<div class="muted">จ่ายเท่ากันแล้ว ไม่ต้องโอนคืน</div>');
+  }
+  if (unassigned) lines.push(`<div class="muted">มี ${unassigned} รายการยังไม่ระบุผู้จ่าย จึงยังไม่ถูกนำมาคิด</div>`);
+  $('#settle').innerHTML = lines.join('');
+}
+
+/* ---------- ใช้ร่วมกัน: ซิงก์รายการระหว่างเครื่อง ---------- */
+const ID_RE = /^[A-Za-z0-9]{1,40}$/, ROOM_RE = /^[a-z0-9]{20}$/, THUMB_RE = /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/;
+const makeBackend = window.__slipSyncBackend || (FIREBASE_CONFIG ? firebaseBackend : null);
+let backend = null, backendPromise = null, unsubs = [], pushT = null;
+const inflight = new Map();   // id -> updatedAt ที่กำลังส่งอยู่
+const syncable = it => it.status !== 'queued' && it.status !== 'reading';
+const rowEl = id => document.querySelector(`#rows tr[data-id="${id}"]`);
+
+async function firebaseBackend() {
+  const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VER}/`;
+  const [{initializeApp}, fs] = await Promise.all([import(base + 'firebase-app.js'), import(base + 'firebase-firestore.js')]);
+  const db = fs.getFirestore(initializeApp(FIREBASE_CONFIG));
+  return {
+    watchItems: (room, cb, onErr) => fs.onSnapshot(fs.collection(db, 'rooms', room, 'items'), {includeMetadataChanges: true}, snap => cb({
+      fromCache: snap.metadata.fromCache,
+      changes: snap.docChanges().map(c => ({type: c.type, id: c.doc.id, data: c.doc.data()})),
+      ids: new Set(snap.docs.map(d => d.id))
+    }), onErr),
+    watchRoom: (room, cb, onErr) => fs.onSnapshot(fs.doc(db, 'rooms', room), s => cb(s.exists() ? s.data() : null), onErr),
+    setItem: (room, id, data) => fs.setDoc(fs.doc(db, 'rooms', room, 'items', id), data),
+    delItem: (room, id) => fs.deleteDoc(fs.doc(db, 'rooms', room, 'items', id)),
+    addMember: (room, name) => fs.setDoc(fs.doc(db, 'rooms', room), {members: fs.arrayUnion(name)}, {merge: true})
+  };
+}
+function getBackend() {
+  if (!backendPromise) backendPromise = Promise.resolve().then(makeBackend).then(b => (backend = b)).catch(e => { backendPromise = null; throw e; });
+  return backendPromise;
+}
+function payerNames() {
+  const s = new Set();
+  if (sync.name) s.add(sync.name);
+  members.forEach(n => s.add(n));
+  items.forEach(i => { if (i.payer) s.add(i.payer); });
+  return [...s];
+}
+function toDoc(it) {
+  return {date: it.date || '', time: it.time || '', payee: it.payee || '', category: it.category || '',
+    amount: typeof it.amount === 'number' && isFinite(it.amount) ? it.amount : null, note: it.note || '', ref: it.ref || '',
+    include: !!it.include, payer: it.payer || '', thumb: it.thumb || '', fileName: it.fileName || '', fileKey: it.fileKey || '',
+    status: it.status, raw: (it.raw || '').slice(0, 4000), error: it.error || '', updatedAt: it.updatedAt || 0};
+}
+// ข้อมูลจากเครื่องอื่น: รับเฉพาะชนิดที่คาดไว้
+function fromDoc(d) {
+  const s = (v, n = 200) => typeof v === 'string' ? v.slice(0, n) : '';
+  return {date: s(d.date, 10), time: s(d.time, 5), payee: s(d.payee), category: s(d.category),
+    amount: typeof d.amount === 'number' && isFinite(d.amount) ? d.amount : null, note: s(d.note, 500), ref: s(d.ref, 60),
+    include: d.include !== false, payer: s(d.payer, 20), thumb: typeof d.thumb === 'string' && THUMB_RE.test(d.thumb) ? d.thumb : '',
+    fileName: s(d.fileName), fileKey: s(d.fileKey, 300), status: ['done', 'warn', 'error', 'manual'].includes(d.status) ? d.status : 'manual',
+    raw: s(d.raw, 4000), error: s(d.error), updatedAt: Number(d.updatedAt) || 0};
+}
+function setSyncState(s) { if (syncState !== s) { syncState = s; renderShare(); } }
+// เชื่อมต่อพลาด: แจ้งครั้งแรก แล้วลองใหม่เองโดยเว้นช่วงนานขึ้นเรื่อย ๆ (4 วิ → สูงสุด 1 นาที)
+let retryT = null, retryN = 0;
+function syncError(e) {
+  console.error(e);
+  setSyncState('error');
+  if (!retryN) toast('ซิงก์ไม่สำเร็จ กำลังลองใหม่: ' + (e && (e.code || e.message) || 'ไม่ทราบสาเหตุ'));
+  clearTimeout(retryT);
+  if (sync.room) retryT = setTimeout(startSync, Math.min(60000, 4000 * 2 ** Math.min(retryN++, 6)));
+}
+// เรียกทุกครั้งที่รายการถูกแก้ในเครื่องนี้
+function touch(it) {
+  it.updatedAt = Date.now();
+  if (sync.room) { it.dirty = true; pushSoon(); }
+}
+function pushSoon() { clearTimeout(pushT); pushT = setTimeout(pushDirty, 700); }
+function pushDirty() {
+  if (!backend || !sync.room) return;
+  const room = sync.room;
+  for (const it of items) {
+    if (!it.dirty || !syncable(it) || inflight.get(it.id) === it.updatedAt) continue;
+    const stamp = it.updatedAt;
+    inflight.set(it.id, stamp);
+    backend.setItem(room, it.id, toDoc(it)).then(() => {
+      if (inflight.get(it.id) === stamp) inflight.delete(it.id);
+      if (sync.room === room && it.updatedAt === stamp) { it.dirty = false; it.synced = true; saveSoon(); }
+    }).catch(e => { if (inflight.get(it.id) === stamp) inflight.delete(it.id); syncError(e); });
+  }
+}
+function pushDelete(id) {
+  if (!backend || !sync.room) return;
+  backend.delItem(sync.room, id)
+    .then(() => { sync.pendingDel = sync.pendingDel.filter(x => x !== id); saveSync(); })
+    .catch(syncError);
+}
+function removeLocal(id) {
+  items = items.filter(i => i.id !== id);
+  const u = fullImages.get(id); if (u) { URL.revokeObjectURL(u); fullImages.delete(id); }
+}
+// ลบรายการในเครื่องนี้ และแจ้งลบบนเซิร์ฟเวอร์ถ้าอยู่ในห้อง
+function dropItem(id) {
+  const it = byId(id); if (!it) return;
+  removeLocal(id);
+  if (sync.room && (it.synced || it.dirty)) {
+    if (!sync.pendingDel.includes(id)) sync.pendingDel.push(id);
+    saveSync(); pushDelete(id);
+  }
+}
+function applyRemote(snap) {
+  if (!sync.room) return;
+  const editing = $('#rows').contains(document.activeElement);   // กำลังพิมพ์อยู่: แก้ทีละแถว ไม่สร้างตารางใหม่
+  let changed = false, full = !editing;
+  const rm = id => {
+    removeLocal(id); changed = true;
+    if (!full) { const tr = rowEl(id); if (tr) tr.remove(); if (!items.length) full = true; }
+  };
+  for (const c of snap.changes) {
+    if (!ID_RE.test(c.id) || sync.pendingDel.includes(c.id)) continue;
+    const local = byId(c.id);
+    if (c.type === 'removed') { if (local && local.synced && !local.dirty) rm(c.id); continue; }
+    const d = fromDoc(c.data || {});
+    if (!local) {
+      const it = newItem({...d, id: c.id, synced: true});
+      items.push(it); changed = true;
+      if (!full) {
+        if (items.length === 1) full = true;
+        else { const t = document.createElement('tbody'); t.innerHTML = rowHtml(it, dupIds()); $('#rows').appendChild(t.firstElementChild); }
+      }
+    } else if (d.updatedAt > (local.updatedAt || 0)) {
+      Object.assign(local, d, {synced: true, dirty: false}); changed = true;
+      if (!full) updateRow(local);
+    }
+  }
+  if (!snap.fromCache) {
+    // รายการที่เคยซิงก์แล้วแต่ไม่มีบนเซิร์ฟเวอร์ = ถูกลบจากอีกเครื่อง
+    for (const it of [...items]) if (it.synced && !it.dirty && !snap.ids.has(it.id)) rm(it.id);
+    retryN = 0;
+    setSyncState('ok');
+  } else setSyncState('offline');
+  if (changed) {
+    if (full) renderTable(); else { refreshDups(); renderCount(); }
+    renderSummary(); save();
+  }
+}
+function stopSync() { unsubs.forEach(u => { try { u(); } catch (_) {} }); unsubs = []; }
+async function startSync() {
+  if (!sync.room || !makeBackend) return;
+  const room = sync.room;
+  setSyncState('connecting');
+  try {
+    const b = await getBackend();
+    if (sync.room !== room) return;
+    stopSync();
+    unsubs.push(b.watchItems(room, s => { if (sync.room === room) applyRemote(s); }, syncError));
+    unsubs.push(b.watchRoom(room, d => {
+      if (sync.room !== room) return;
+      members = d && Array.isArray(d.members) ? d.members.filter(n => typeof n === 'string' && n).map(n => n.slice(0, 20)) : [];
+      renderShare();
+      if (!$('#rows').contains(document.activeElement)) renderTable();
+      renderSummary();
+    }, syncError));
+    b.addMember(room, sync.name).catch(syncError);
+    sync.pendingDel.forEach(pushDelete);
+    pushDirty();
+  } catch (e) { syncError(e); }
+}
+function enterRoom(room, name) {
+  stopSync(); inflight.clear(); clearTimeout(retryT); retryN = 0;
+  sync = {room, name, pendingDel: []}; saveSync();
+  members = [name];
+  const now = Date.now();
+  items.forEach(it => { if (!it.payer) it.payer = name; if (!it.updatedAt) it.updatedAt = now; it.synced = false; it.dirty = true; });
+  save(); renderShare(); renderTable(); renderSummary();
+  startSync();
+}
+function leaveRoom() {
+  stopSync(); inflight.clear(); clearTimeout(pushT); clearTimeout(retryT); retryN = 0;
+  sync = {room: '', name: '', pendingDel: []}; saveSync();
+  members = []; syncState = 'off';
+  items.forEach(it => { it.synced = false; it.dirty = false; });
+  save(); renderShare(); renderTable(); renderSummary();
+}
+function renderShare() {
+  const el = $('#share');
+  if (!makeBackend) { el.hidden = true; return; }
+  el.hidden = false;
+  const on = !!sync.room;
+  $('#roomCreate').hidden = on; $('#roomJoin').hidden = on;
+  $('#roomInvite').hidden = !on; $('#roomLeave').hidden = !on;
+  const [txt, cls] = on ? ({connecting: ['กำลังเชื่อมต่อ…', ''], ok: ['ซิงก์แล้ว', 'info'], offline: ['ออฟไลน์ – จะซิงก์เมื่อมีเน็ต', 'warn'],
+    error: ['เชื่อมต่อไม่ได้', 'danger']}[syncState] || ['กำลังเชื่อมต่อ…', '']) : ['ยังไม่ได้เปิด', ''];
+  const st = $('#shareState'); st.textContent = txt; st.className = 'pill ' + cls;
+  $('#shareWho').textContent = on
+    ? `คุณคือ ${sync.name} · สมาชิก: ${[...new Set([sync.name, ...members])].join(', ')}`
+    : 'ให้อีกคนอัปสลิปจากเครื่องตัวเอง แล้วรวมยอดในรายการเดียวกัน';
+  document.querySelector('table.items').classList.toggle('shared', on);
+  $('#payerPanel').hidden = !on;
+  $('#noteShare').hidden = !on;
+}
+
+/* ห้อง: สร้าง / เข้า / เชิญ */
+const CODE_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
+function genCode() {
+  let out = '';
+  while (out.length < 20) {
+    for (const v of crypto.getRandomValues(new Uint8Array(32))) {
+      if (v < 248 && out.length < 20) out += CODE_CHARS[v % 31];   // 248 = 31×8 ตัดค่าที่ทำให้ไม่สม่ำเสมอทิ้ง
+    }
+  }
+  return out;
+}
+const fmtCode = c => c.replace(/(.{5})(?=.)/g, '$1-');
+function normCode(s) {
+  const m = String(s).match(/room=([A-Za-z0-9-]+)/);
+  return (m ? m[1] : String(s)).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+const inviteLink = () => `${location.origin}${location.pathname}#room=${sync.room}`;
+let roomMode = 'create';
+function openRoomDlg(mode, code) {
+  roomMode = mode;
+  $('#rTitle').textContent = mode === 'create' ? 'สร้างห้อง' : 'เข้าห้อง';
+  $('#rCodeWrap').hidden = mode === 'create';
+  $('#rCode').value = code ? fmtCode(code) : '';
+  $('#rName').value = sync.name || '';
+  const notes = [];
+  if (sync.room) notes.push('เครื่องนี้อยู่ในอีกห้องอยู่ จะย้ายมาห้องนี้แทน');
+  if (items.length) notes.push(`รายการในเครื่องนี้ ${items.length} รายการจะถูกเพิ่มเข้าห้องด้วย`);
+  const hint = $('#rHint'); hint.className = ''; hint.textContent = notes.join(' · ');
+  $('#roomDlg').showModal();
+}
+function openInvite() {
+  $('#iCode').textContent = fmtCode(sync.room);
+  $('#inviteDlg').showModal();
+}
+async function copyText(text, okMsg) {
+  try { await navigator.clipboard.writeText(text); toast(okMsg); }
+  catch (_) { toast('คัดลอกไม่ได้ กรุณากดค้างที่รหัสเพื่อคัดลอกเอง'); }
+}
+$('#roomCreate').addEventListener('click', () => openRoomDlg('create'));
+$('#roomJoin').addEventListener('click', () => openRoomDlg('join'));
+$('#roomInvite').addEventListener('click', openInvite);
+$('#roomLeave').addEventListener('click', () => {
+  if (confirm('ออกจากห้อง?\nรายการจะยังอยู่ในเครื่องนี้ แต่จะไม่ซิงก์กับคนอื่นอีก')) leaveRoom();
+});
+$('#rCancel').addEventListener('click', () => $('#roomDlg').close());
+$('#roomForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const hint = $('#rHint');
+  const fail = msg => { hint.textContent = msg; hint.className = 'err'; };
+  const name = $('#rName').value.trim().slice(0, 20);
+  if (!name) return fail('กรุณาใส่ชื่อของคุณ');
+  const code = roomMode === 'create' ? genCode() : normCode($('#rCode').value);
+  if (!ROOM_RE.test(code)) return fail('รหัสห้องไม่ถูกต้อง (ต้องมี 20 ตัวอักษร)');
+  $('#roomDlg').close();
+  enterRoom(code, name);
+  if (roomMode === 'create') openInvite();
+});
+$('#iClose').addEventListener('click', () => $('#inviteDlg').close());
+$('#iCopy').addEventListener('click', () => copyText(fmtCode(sync.room), 'คัดลอกรหัสห้องแล้ว'));
+$('#iShare').addEventListener('click', () => {
+  const url = inviteLink();
+  if (navigator.share) navigator.share({title: 'คำนวณค่าใช้จ่ายจากสลิป', text: 'เข้าห้องเพื่อรวมค่าใช้จ่ายด้วยกัน (เปิดลิงก์ใน Safari)', url}).catch(() => {});
+  else copyText(url, 'คัดลอกลิงก์เชิญแล้ว');
+});
+window.addEventListener('offline', () => { if (sync.room) setSyncState('offline'); });
+window.addEventListener('online', () => { if (sync.room && syncState === 'error') { clearTimeout(retryT); startSync(); } });
+// เปิดจากลิงก์เชิญ (#room=...) → ถามชื่อแล้วเข้าห้อง
+function handleInviteHash() {
+  const m = location.hash.match(/room=([A-Za-z0-9-]+)/);
+  if (!m) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  if (!makeBackend) return;
+  const code = normCode(m[1]);
+  if (!ROOM_RE.test(code)) { toast('ลิงก์เชิญไม่ถูกต้อง'); return; }
+  if (code === sync.room) { toast('เครื่องนี้อยู่ในห้องนี้แล้ว'); return; }
+  openRoomDlg('join', code);
 }
 
 /* ---------- viewer ---------- */
@@ -768,8 +1194,9 @@ function exportCsv() {
   if (!items.length) { toast('ยังไม่มีรายการให้ส่งออก'); return; }
   const q = v => { const s = String(v ?? ''); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   const head = ['วันที่','เวลา','ผู้รับ/ร้านค้า','หมวดหมู่','จำนวนเงิน','เลขอ้างอิง','หมายเหตุ','นับรวม','ไฟล์'];
+  if (sync.room) head.push('ผู้จ่าย');
   const rows = items.map(i => [i.date, i.time, i.payee, i.category, i.amount != null ? i.amount.toFixed(2) : '', i.ref, i.note,
-                               i.include ? 'ใช่' : 'ไม่', i.fileName].map(q).join(','));
+                               i.include ? 'ใช่' : 'ไม่', i.fileName, ...(sync.room ? [i.payer] : [])].map(q).join(','));
   const blob = new Blob(['﻿' + [head.join(','), ...rows].join('\r\n')], {type: 'text/csv;charset=utf-8'});
   const name = `ค่าใช้จ่าย-${today()}.csv`;
   const download = () => {
@@ -814,21 +1241,20 @@ tbody.addEventListener('input', e => {
   const it = byId(el.closest('tr').dataset.id); if (!it) return;
   if (f === 'amount') { const v = parseFloat(el.value); it.amount = isNaN(v) ? null : Math.round(v * 100) / 100; el.classList.remove('need'); }
   else it[f] = el.value;
-  renderSummary(); saveSoon();
+  touch(it); renderSummary(); saveSoon();
 });
 tbody.addEventListener('change', e => {
   const el = e.target, f = el.dataset.f; if (!f) return;
   const it = byId(el.closest('tr').dataset.id); if (!it) return;
-  if (f === 'include') { it.include = el.checked; el.closest('tr').classList.toggle('excluded', !it.include); renderSummary(); save(); }
+  if (f === 'include') { it.include = el.checked; el.closest('tr').classList.toggle('excluded', !it.include); touch(it); renderSummary(); save(); }
   else refreshDups();
 });
 tbody.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
   const id = b.closest('tr').dataset.id;
   if (b.dataset.act === 'view') openViewer(id);
-  else if (b.dataset.act === 'del' && confirm('ลบรายการนี้?')) {
-    items = items.filter(i => i.id !== id);
-    const u = fullImages.get(id); if (u) { URL.revokeObjectURL(u); fullImages.delete(id); }
+  else if (b.dataset.act === 'del' && confirm(sync.room ? 'ลบรายการนี้?\nจะหายจากเครื่องของทุกคนในห้องด้วย' : 'ลบรายการนี้?')) {
+    dropItem(id);
     renderTable(); renderSummary(); save(); setStatus();
   }
 });
@@ -836,7 +1262,7 @@ tbody.addEventListener('click', e => {
 $('#people').addEventListener('input', e => { people = Math.max(1, parseInt(e.target.value) || 1); renderSummary(); saveSoon(); });
 $('#addManual').addEventListener('click', () => {
   const it = newItem({date: today(), category: 'อื่นๆ'});
-  items.push(it); renderTable(); renderSummary(); save();
+  items.push(it); touch(it); renderTable(); renderSummary(); save();
   const el = document.querySelector(`tr[data-id="${it.id}"] [data-f="payee"]`); if (el) el.focus();
 });
 $('#sortDate').addEventListener('click', () => {
@@ -846,7 +1272,8 @@ $('#sortDate').addEventListener('click', () => {
 $('#exportCsv').addEventListener('click', exportCsv);
 $('#printBtn').addEventListener('click', () => window.print());
 $('#clearAll').addEventListener('click', () => {
-  if (!items.length || !confirm('ลบรายการทั้งหมด?')) return;
+  if (!items.length || !confirm(sync.room ? 'ลบรายการทั้งหมด?\nจะหายจากเครื่องของทุกคนในห้องด้วย' : 'ลบรายการทั้งหมด?')) return;
+  [...items].forEach(i => dropItem(i.id));
   items = []; queue.length = 0;
   fullImages.forEach(u => URL.revokeObjectURL(u)); fullImages.clear();
   renderTable(); renderSummary(); save(); setStatus();
@@ -857,10 +1284,11 @@ window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') save(); });
 
 /* ---------- init ---------- */
-load();
+load(); loadSync();
 items.forEach(i => { if (i.status === 'queued' || i.status === 'reading') { i.status = 'error'; i.error = 'ปิดหน้าก่อนอ่านเสร็จ'; } });
 $('#people').value = people;
-renderTable(); renderSummary();
+renderShare(); renderTable(); renderSummary();
+handleInviteHash(); startSync();
 setTimeout(() => loadTesseract().catch(() => {}), 1500);   // โหลดตัวอ่านล่วงหน้าหลังหน้าแสดงผลแล้ว
 })();
 </script>
